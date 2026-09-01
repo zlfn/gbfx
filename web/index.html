@@ -16,6 +16,9 @@
     <span class="brand-name">gb-image-fx</span>
   </div>
   <div class="topbar-links">
+    <button type="button" id="about-open" title="about" aria-label="about">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0a8 8 0 1 0 0 16A8 8 0 0 0 8 0Zm0 1.5a6.5 6.5 0 1 1 0 13 6.5 6.5 0 0 1 0-13ZM8 3a1 1 0 1 0 0 2 1 1 0 0 0 0-2Zm-.9 3.4v6h1.8v-6H7.1Z"/></svg>
+    </button>
     <a href="https://crates.io/crates/gb-image-fx" title="the crate on crates.io" aria-label="the crate on crates.io">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .8 14 4v8L8 15.2 2 12V4L8 .8Zm0 1.5L3.6 4.6 8 6.9l4.4-2.3L8 2.3ZM3.2 5.6v5.8l4.2 2.2V7.8L3.2 5.6Zm5.4 8V7.8l4.2-2.2v5.8l-4.2 2.2Z"/></svg></a>
     <a href="https://github.com/zlfn/rust-gb/tree/main/tools/gb-image-fx" title="the source on GitHub" aria-label="the source on GitHub">
@@ -178,6 +181,65 @@
 
 <!-- A classic script still runs from a file:// page, so it can explain why the
      module one did not. -->
+<dialog class="about" id="about">
+  <button type="button" class="about-close" id="about-close" aria-label="Close">&times;</button>
+
+  <h2>gb-image-fx <small>0.1.0</small></h2>
+  <p class="about-by">by zlfn</p>
+
+  <p>Images become the tile data, palettes, attributes and tile map a Game Boy
+  or Game Boy Color program loads. The converter is the
+  <a href="https://crates.io/crates/gb-image-fx">gb-image-fx</a> crate compiled
+  to WebAssembly, so nothing leaves the page.</p>
+
+  <h3>The ROM is pure Rust</h3>
+  <p>A full-screen conversion can be downloaded as a cartridge, and the program
+  inside it is written in Rust with no C at all &mdash; the hardware registers
+  are poked directly, down to the <code>STAT</code> interrupt that lets one
+  screen hold 360 tiles when a tile map only reaches 256.
+  <a href="https://github.com/zlfn/gbfx/blob/main/rom/src/main.rs">Read it</a>,
+  or the runtime it stands on,
+  <a href="https://github.com/zlfn/rust-gb">rust-gb</a>.</p>
+
+  <h3>What it uses</h3>
+  <dl class="about-list">
+    <dt>Palette reduction</dt>
+    <dd>A port of <a href="https://github.com/rilden/tiledpalettequant">tiledpalettequant</a>
+      by rilden. Eight four-colour palettes and the squares that use them are
+      settled together, growing a colour at a time and handing the budget to
+      whichever palette carries the most error.</dd>
+
+    <dt>Screen correction</dt>
+    <dd>The CGB display model (Modern &ndash; Balanced) from
+      <a href="https://github.com/LIJI32/SameBoy">SameBoy</a> by Lior Halphon,
+      run backwards so the colours land where they started.</dd>
+
+    <dt>Four shades</dt>
+    <dd>The contrast preserving decolorization of Lu, Xu and Jia, through the
+      <a href="https://crates.io/crates/decolorize">decolorize</a> crate, so
+      colours that differ in hue but not in lightness stay apart.</dd>
+
+    <dt>Dithering</dt>
+    <dd>Blue noise, Bayer, or a plain ordered pattern, weighted against the
+      error each choice leaves behind.</dd>
+  </dl>
+
+  <h3>Licences</h3>
+  <p class="about-lic">Everything here is permissively licensed. The converter
+  and the runtime are <b>Zlib OR Apache-2.0 OR MIT</b>; what they pull in:</p>
+  <ul class="about-lic-list">
+    <li><b>Zlib OR Apache-2.0 OR MIT</b> &mdash; bytemuck, wide</li>
+    <li><b>MIT OR Apache-2.0</b> &mdash; image, palette, wasm-bindgen, glam,
+      num-traits, bumpalo, once_cell, typenum, syn, quote, proc-macro2</li>
+    <li><b>MIT</b> &mdash; decolorize, phf</li>
+    <li><b>Apache-2.0</b> &mdash; nalgebra, simba, approx</li>
+    <li><b>BSD-3-Clause OR Apache-2.0</b> &mdash; moxcms, pxfm</li>
+    <li><b>MIT/Apache-2.0</b> &mdash; matrixmultiply, rawpointer, siphasher</li>
+    <li><b>Unlicense OR MIT</b> &mdash; byteorder-lite</li>
+    <li><b>(MIT OR Apache-2.0) AND Unicode-3.0</b> &mdash; unicode-ident</li>
+  </ul>
+</dialog>
+
 <script>
 window.addEventListener('DOMContentLoaded', function () {
   setTimeout(function () {

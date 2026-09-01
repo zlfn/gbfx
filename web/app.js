@@ -609,6 +609,13 @@ $('tile-in').onclick = () => setTileZoom(state.tileZoom + 1);
 $('tile-out').onclick = () => setTileZoom(state.tileZoom - 1);
 setTileZoom(state.tileZoom);
 
+const about = $('about');
+$('about-open').onclick = () => about.showModal();
+$('about-close').onclick = () => about.close();
+// A dialog fills its own box, so a click landing on the element itself is the
+// backdrop rather than anything inside it.
+about.addEventListener('click', (e) => { if (e.target === about) about.close(); });
+
 syncForm();
 
 window.__gbfxReady = true;
