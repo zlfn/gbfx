@@ -1,0 +1,17 @@
+[package]
+name = "gb-image-fx-wasm"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+gb-image-fx = { version = "0.1", default-features = false, features = ["wasm"] }
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
