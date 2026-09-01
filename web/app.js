@@ -155,7 +155,7 @@ async function convertNow() {
 
   showError(null);
   $('busy').hidden = false;
-  for (const id of ['cv-result', 'dock', 'dlbar', 'rail']) $(id).hidden = true;
+  for (const id of ['cv-result', 'dock', 'dlbar', 'rail', 'rail-toggle']) $(id).hidden = true;
 
   try {
     const out = await runConvert(rgba, state.source.width, state.source.height, opts);
@@ -165,7 +165,7 @@ async function convertNow() {
   } catch (err) {
     if (seq !== state.seq) return;
     state.out = null;
-    for (const id of ['cv-result', 'dock', 'dlbar', 'rail', 'zoom-wrap']) $(id).hidden = true;
+    for (const id of ['cv-result', 'dock', 'dlbar', 'rail', 'rail-toggle', 'zoom-wrap']) $(id).hidden = true;
     showError(err.message);
   } finally {
     if (seq === state.seq) $('busy').hidden = true;
@@ -177,6 +177,7 @@ async function convertNow() {
 function render() {
   for (const id of ['cv-result', 'dock', 'dlbar', 'zoom-wrap']) $(id).hidden = false;
   $('rail').hidden = false;
+  $('rail-toggle').hidden = false;
   drawPreview();
   drawDownloads();
   drawTiles();
@@ -240,6 +241,16 @@ function applyView() {
 
   cv.style.transform =
     `translate(-50%, -50%) translate(${state.panX}px, ${state.panY}px) scale(${scale})`;
+
+  // The source sits in a corner the result may well reach; let it give way.
+  const thumb = $('thumb');
+  if (!thumb.hidden) {
+    const t = thumb.getBoundingClientRect();
+    const left = vp.left + vp.width / 2 + state.panX - w / 2;
+    const top = vp.top + vp.height / 2 + state.panY - h / 2;
+    thumb.classList.toggle('is-tucked',
+      left < t.right + 12 && top < t.bottom + 12 && top + h > t.top - 12);
+  }
   $('viewport').classList.toggle('can-pan', slackX > 0 || slackY > 0);
   $('zoom-label').textContent = state.zoomStep + '\u00d7';
   $('zoom-out').disabled = state.zoomStep <= 1;
@@ -608,6 +619,11 @@ const setTileZoom = (z) => {
 $('tile-in').onclick = () => setTileZoom(state.tileZoom + 1);
 $('tile-out').onclick = () => setTileZoom(state.tileZoom - 1);
 setTileZoom(state.tileZoom);
+
+// Below the width that fits a third column the rail is a drawer.
+const rail = $('rail');
+$('rail-toggle').onclick = () => rail.classList.toggle('is-open');
+$('rail-close').onclick = () => rail.classList.remove('is-open');
 
 const about = $('about');
 $('about-open').onclick = () => about.showModal();

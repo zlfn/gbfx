@@ -119,10 +119,13 @@
 
     <div class="stage-bar">
       <dl class="stats" id="stats"></dl>
+      <div class="bar-right">
+      <button type="button" class="ghost" id="rail-toggle" hidden>Palettes</button>
       <div class="zoom" id="zoom-wrap" hidden>
         <button type="button" class="ghost icon" id="zoom-out" aria-label="Zoom out">&minus;</button>
         <span id="zoom-label">4&times;</span>
         <button type="button" class="ghost icon" id="zoom-in" aria-label="Zoom in">+</button>
+      </div>
       </div>
     </div>
 
@@ -174,7 +177,9 @@
 
   <!-- ── palettes, down the right ─────────────────────────── -->
   <aside class="rail" id="rail" hidden>
-    <h2 class="pane-head"><span id="pal-title">Palettes</span> <span class="count" id="pal-count"></span></h2>
+    <h2 class="pane-head"><span id="pal-title">Palettes</span> <span class="count" id="pal-count"></span>
+      <button type="button" class="ghost icon rail-close" id="rail-close" aria-label="Close">&times;</button>
+    </h2>
     <div class="pane-body"><div class="palettes" id="palettes"></div></div>
   </aside>
 </main>
