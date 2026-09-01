@@ -364,6 +364,80 @@ function drawStats() {
   $('stats').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
 }
 
+// ── the Game Boy ROM ───────────────────────────────────────
+
+// The viewer draws a whole screen of tiles, one per cell, in reading order.
+const ROM_SCREEN = { w: 160, h: 144, tiles: 360 };
+
+let romCache = null;
+async function loadRom() {
+  if (!romCache) {
+    const [rom, offsets] = await Promise.all([
+      fetch('./rom/viewer.gbc').then((r) => r.arrayBuffer()),
+      fetch('./rom/offsets.json').then((r) => r.json()),
+    ]);
+    romCache = { rom: new Uint8Array(rom), offsets };
+  }
+  return romCache;
+}
+
+function romFits(o) {
+  return o.previewWidth === ROM_SCREEN.w
+    && o.previewHeight === ROM_SCREEN.h
+    && o.tiles.length === ROM_SCREEN.tiles * 16
+    && !o.opts.metaWidth;
+}
+
+// Why the conversion cannot go in the ROM, in the page's own terms.
+function romBlocker(o) {
+  if (o.previewWidth !== ROM_SCREEN.w || o.previewHeight !== ROM_SCREEN.h) {
+    return 'the ROM shows a whole 160x144 screen';
+  }
+  if (o.opts.metaWidth) return 'the ROM draws a background, not sprites';
+  if (o.tiles.length !== ROM_SCREEN.tiles * 16) {
+    return 'the ROM wants one tile per cell, so leave the folding off';
+  }
+  return '';
+}
+
+async function buildRom() {
+  const o = state.out;
+  const { rom, offsets } = await loadRom();
+  const out = rom.slice();
+
+  const put = (name, data) => {
+    const { offset, size } = offsets[name];
+    out.set(data.subarray(0, size), offset);
+    out.fill(0, offset + Math.min(data.length, size), offset + size);
+  };
+
+  put('tiles', o.tiles);
+  if (o.palettes.length) {
+    put('palettes', o.palettes);
+    put('attributes', o.attributes);
+  } else {
+    // A DMG image carries no palette, but the same ROM runs on a Game Boy
+    // Color, so give it the shades that console would have shown.
+    const pal = new Uint8Array(offsets.palettes.size);
+    for (let i = 0; i < pal.length; i += 2) {
+      const [r, g, b] = DMG_SHADES[(i >> 1) & 3];
+      const v = (r >> 3) | ((g >> 3) << 5) | ((b >> 3) << 10);
+      pal[i] = v & 0xff;
+      pal[i + 1] = v >> 8;
+    }
+    put('palettes', pal);
+    put('attributes', new Uint8Array(offsets.attributes.size));
+  }
+
+  // The header checksum covers only the header, which is untouched; the global
+  // one covers the whole cartridge and has to be redone.
+  let sum = 0;
+  for (let i = 0; i < out.length; i++) if (i !== 0x14e && i !== 0x14f) sum += out[i];
+  out[0x14e] = (sum >> 8) & 0xff;
+  out[0x14f] = sum & 0xff;
+  return out;
+}
+
 const FILE_NOTES = {
   tiles: '2bpp tile data, 16 bytes each',
   palettes: 'RGB555, 8 bytes per palette',
@@ -389,6 +463,14 @@ function drawDownloads() {
   }
   box.append(card('preview.png', 'png', 'the image as the console shows it',
     () => $('cv-result').toBlob((b) => saveBlob(`${state.name}_preview.png`, b))));
+
+  const blocker = romBlocker(o);
+  const rom = card(`${state.name}.gbc`, 'rom',
+    blocker || 'a Game Boy program that shows this image',
+    async () => save(`${state.name}.gbc`, await buildRom()));
+  rom.classList.add('dl-rom');
+  rom.disabled = !romFits(o);
+  box.append(rom);
 }
 
 function card(name, size, title, onClick) {

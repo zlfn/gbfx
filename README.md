@@ -12,8 +12,12 @@ second or two.
 
 ## The viewer ROM
 
-`rom/` is a Game Boy program that shows one full-screen image, and `web/rom`
-holds it built along with the offsets of the three blobs the page writes over.
+A full-screen conversion can also be downloaded as a Game Boy ROM: the page
+writes the tiles, palettes and attributes into a prebuilt program and fixes the
+cartridge checksum, so the result runs in an emulator or on hardware.
+
+`rom/` is that program, and `web/rom` holds it built along with the offsets of
+the three blobs the page writes over.
 A map entry is one byte, so a tile map reaches 256 tiles while a full screen
 needs 360; the ROM draws the top nine rows with unsigned tile indices and the
 bottom nine with signed ones, flipping `LCDC` on a `STAT` interrupt at LY=72.

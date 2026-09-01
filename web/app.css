@@ -577,6 +577,13 @@ canvas {
   transition: border-color .12s, background .12s;
 }
 .dl:hover { border-color: var(--accent); background: #10150f; }
+.dl:disabled { opacity: .4; cursor: not-allowed; }
+.dl:disabled:hover { border-color: var(--line); background: var(--bg-raised); }
+
+/* The ROM is the one output you can just run. */
+.dl-rom { border-color: var(--accent-dim); }
+.dl-rom .dl-arrow { background: var(--accent); }
+.dl-rom:disabled { border-color: var(--line); }
 
 .dl-arrow {
   flex: none;
