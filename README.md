@@ -10,6 +10,22 @@ The conversion is the crate compiled to WebAssembly, so it runs on the page and
 nothing is uploaded. It runs in a worker, since a dithered reduction takes a
 second or two.
 
+## The viewer ROM
+
+`rom/` is a Game Boy program that shows one full-screen image, and `web/rom`
+holds it built along with the offsets of the three blobs the page writes over.
+A map entry is one byte, so a tile map reaches 256 tiles while a full screen
+needs 360; the ROM draws the top nine rows with unsigned tile indices and the
+bottom nine with signed ones, flipping `LCDC` on a `STAT` interrupt at LY=72.
+
+Both are committed, since building the ROM needs the [rust-z80
+fork](https://github.com/zlfn/rust-gb) and `cargo gb`, which the page's own
+build has no use for. To rebuild it:
+
+```
+./build-rom.sh
+```
+
 ## Building
 
 ```
@@ -30,5 +46,7 @@ python3 -m http.server --directory web
 | Path | |
 |---|---|
 | `crate/` | a cdylib that links the crate's browser entry point |
+| `rom/` | the Game Boy viewer the page patches an image into |
 | `web/` | the page, served as-is |
 | `build.sh` | builds `web/pkg` |
+| `build-rom.sh` | builds `web/rom` (needs the rust-z80 toolchain) |

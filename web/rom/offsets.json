@@ -1,0 +1,14 @@
+{
+  "tiles": {
+    "offset": 1741,
+    "size": 5760
+  },
+  "palettes": {
+    "offset": 7501,
+    "size": 64
+  },
+  "attributes": {
+    "offset": 1381,
+    "size": 360
+  }
+}

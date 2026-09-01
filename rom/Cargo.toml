@@ -1,0 +1,15 @@
+[package]
+name = "gbfx-viewer"
+version = "0.1.0"
+edition = "2024"
+publish = false
+autobins = false
+
+[lib]
+name = "gbfx_viewer"
+path = "src/main.rs"
+crate-type = ["staticlib"]
+
+[dependencies]
+rust-gb = { git = "https://github.com/zlfn/rust-gb", features = ["cgb"] }
+gb-rt = { git = "https://github.com/zlfn/rust-gb" }

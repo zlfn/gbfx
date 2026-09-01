@@ -1,0 +1,3 @@
+# The Game Boy's CPU needs the fork; the rest of this repository is on stable.
+[toolchain]
+channel = "rust-z80"

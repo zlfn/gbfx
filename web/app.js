@@ -6,6 +6,16 @@ const DMG_SHADES = [[0x9b, 0xbc, 0x0f], [0x8b, 0xac, 0x0f], [0x30, 0x62, 0x30], 
 const worker = new Worker('./worker.js', { type: 'module' });
 const pending = new Map();
 let nextId = 0;
+let workerBroken = false;
+
+worker.onerror = () => {
+  const failed = new Error('The converter could not start. Rebuild it with ./build.sh, '
+    + 'and serve this directory over HTTP rather than opening the file.');
+  for (const [, job] of pending) job.reject(failed);
+  pending.clear();
+  workerBroken = true;
+  showError(failed.message);
+};
 
 worker.onmessage = (e) => {
   const { id, ok, result, error } = e.data;
@@ -16,6 +26,7 @@ worker.onmessage = (e) => {
 };
 
 function runConvert(rgba, width, height, opts) {
+  if (workerBroken) return Promise.reject(new Error('The converter is not running.'));
   const id = nextId++;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject });
@@ -29,8 +40,11 @@ const state = {
   name: 'image',
   source: null,     // ImageData of the loaded file
   out: null,        // last conversion
-  zoom: 2,
-  view: 'preview',
+  zoomStep: 1,    // 1 means as large as the viewport can hold
+  tileZoom: 4,
+  hasAlpha: false,
+  panX: 0,
+  panY: 0,
   seq: 0,
 };
 
@@ -59,8 +73,17 @@ async function loadFile(file) {
   state.source = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
   bitmap.close();
 
+  // Reserving index 0 only pays off when something is actually transparent.
+  const px = state.source.data;
+  state.hasAlpha = false;
+  for (let i = 3; i < px.length; i += 4) {
+    if (px[i] < 128) { state.hasAlpha = true; break; }
+  }
+
   $('opts').hidden = false;
   $('empty').hidden = true;
+  state.zoomStep = 1;
+  state.panX = state.panY = 0;
   drawSource();
   schedule();
 }
@@ -103,6 +126,7 @@ function syncForm() {
   $('dither-body').classList.toggle('is-hidden', !$('do-dither').checked);
   $('meta-row').classList.toggle('is-hidden', !$('do-meta').checked);
 
+  $('obj-note').hidden = !($('do-obj').checked && state.source && !state.hasAlpha);
   $('maxpal-out').value = $('maxpal').value;
   $('dither-out').value = (+$('dither-w').value).toFixed(2);
   $('cap-result').textContent = dmg ? 'game boy' : 'game boy color';
@@ -131,7 +155,7 @@ async function convertNow() {
 
   showError(null);
   $('busy').hidden = false;
-  setViewsHidden(true);
+  for (const id of ['cv-result', 'dock', 'dlbar', 'rail']) $(id).hidden = true;
 
   try {
     const out = await runConvert(rgba, state.source.width, state.source.height, opts);
@@ -141,7 +165,7 @@ async function convertNow() {
   } catch (err) {
     if (seq !== state.seq) return;
     state.out = null;
-    $('foot').hidden = true;
+    for (const id of ['cv-result', 'dock', 'dlbar', 'rail', 'zoom-wrap']) $(id).hidden = true;
     showError(err.message);
   } finally {
     if (seq === state.seq) $('busy').hidden = true;
@@ -151,26 +175,18 @@ async function convertNow() {
 // ── rendering ──────────────────────────────────────────────
 
 function render() {
-  setViewsHidden(true);
-  $('view-' + state.view).hidden = false;
-  $('zoom-wrap').style.visibility = state.view === 'palettes' ? 'hidden' : 'visible';
-
-  if (state.view === 'preview') drawPreview();
-  else if (state.view === 'tiles') drawTiles();
-  else drawPalettes();
-
-  drawStats();
+  for (const id of ['cv-result', 'dock', 'dlbar', 'zoom-wrap']) $(id).hidden = false;
+  $('rail').hidden = false;
+  drawPreview();
   drawDownloads();
-  $('foot').hidden = false;
-}
-
-function setViewsHidden(hidden) {
-  for (const v of ['preview', 'tiles', 'palettes']) $('view-' + v).hidden = hidden;
+  drawTiles();
+  drawPalettes();
+  drawStats();
 }
 
 function drawSource() {
   const { width: w, height: h } = state.source;
-  const max = 320;
+  const max = 264;   // a corner thumbnail, not a second view
   const scale = Math.min(1, max / w, max / h);
   const cv = $('cv-source');
   cv.width = Math.max(1, Math.round(w * scale));
@@ -182,6 +198,7 @@ function drawSource() {
   const ctx = cv.getContext('2d');
   ctx.imageSmoothingEnabled = true;
   ctx.drawImage(tmp, 0, 0, cv.width, cv.height);
+  $('thumb').hidden = false;
 }
 
 function drawPreview() {
@@ -191,8 +208,41 @@ function drawPreview() {
   cv.height = o.previewHeight;
   cv.getContext('2d').putImageData(
     new ImageData(new Uint8ClampedArray(o.preview), o.previewWidth, o.previewHeight), 0, 0);
-  cv.style.width = o.previewWidth * state.zoom + 'px';
   cv.classList.toggle('checker', o.opts.obj);
+  applyView();
+}
+
+// The largest whole multiple that still fits, so the pixels stay square.
+function fitZoom() {
+  const o = state.out;
+  if (!o) return 1;
+  const vp = $('viewport').getBoundingClientRect();
+  const pad = 32;
+  return Math.max(1, Math.min(
+    Math.floor((vp.width - pad) / o.previewWidth),
+    Math.floor((vp.height - pad) / o.previewHeight)));
+}
+
+// Position the result, holding it inside the viewport unless it is larger.
+function applyView() {
+  const o = state.out;
+  if (!o) return;
+  const cv = $('cv-result');
+  const vp = $('viewport').getBoundingClientRect();
+  const scale = fitZoom() * state.zoomStep;
+  const w = o.previewWidth * scale;
+  const h = o.previewHeight * scale;
+
+  const slackX = Math.max(0, (w - vp.width) / 2);
+  const slackY = Math.max(0, (h - vp.height) / 2);
+  state.panX = Math.min(slackX, Math.max(-slackX, state.panX));
+  state.panY = Math.min(slackY, Math.max(-slackY, state.panY));
+
+  cv.style.transform =
+    `translate(-50%, -50%) translate(${state.panX}px, ${state.panY}px) scale(${scale})`;
+  $('viewport').classList.toggle('can-pan', slackX > 0 || slackY > 0);
+  $('zoom-label').textContent = state.zoomStep + '\u00d7';
+  $('zoom-out').disabled = state.zoomStep <= 1;
 }
 
 // Every tile drawn with the palette of the first cell that uses it.
@@ -202,6 +252,9 @@ function drawTiles() {
   grid.textContent = '';
 
   const count = o.tiles.length / 16;
+  $('tile-count').textContent =
+    count === o.totalTiles ? `${count}` : `${count} kept of ${o.totalTiles}`;
+
   const palettes = readPalettes(o);
   const palOf = new Array(count).fill(0);
   if (o.attributes.length) {
@@ -212,12 +265,10 @@ function drawTiles() {
     }
   }
 
-  const z = Math.max(2, state.zoom * 2);
   const frag = document.createDocumentFragment();
   for (let t = 0; t < count; t++) {
     const cv = document.createElement('canvas');
     cv.width = 8; cv.height = 8;
-    cv.style.width = cv.style.height = 8 * z + 'px';
     cv.title = `tile ${t}`;
     const img = new ImageData(8, 8);
     const pal = palettes[palOf[t]] || palettes[0];
@@ -245,8 +296,12 @@ function readPalettes(o) {
     const pal = [];
     for (let i = 0; i < 4; i++) {
       const v = o.palettes[p + i * 2] | (o.palettes[p + i * 2 + 1] << 8);
+      // Each channel is five bits; repeating the top bits into the bottom ones
+      // spreads 0..31 over the whole 0..255 range.
       const e = (x) => (x << 3) | (x >> 2);
-      pal.push([e(v & 31), e((v >> 5) & 31), e((v >> 10) & 31)]);
+      const rgb = [e(v & 31), e((v >> 5) & 31), e((v >> 10) & 31)];
+      rgb.raw = v;
+      pal.push(rgb);
     }
     out.push(pal);
   }
@@ -254,15 +309,19 @@ function readPalettes(o) {
 }
 
 function drawPalettes() {
+  const o = state.out;
   const box = $('palettes');
   box.textContent = '';
-  const palettes = readPalettes(state.out);
+  const palettes = readPalettes(o);
+  $('pal-title').textContent = o.palettes.length ? 'Palettes' : 'Shades';
+  $('pal-count').textContent = o.palettes.length ? `${palettes.length}` : '';
+
   palettes.forEach((pal, i) => {
     const el = document.createElement('div');
     el.className = 'pal';
     const head = document.createElement('div');
     head.className = 'pal-head';
-    head.textContent = state.out.palettes.length ? `palette ${i}` : 'screen shades';
+    head.textContent = o.palettes.length ? `palette ${i}` : 'game boy';
     const row = document.createElement('div');
     row.className = 'pal-swatches';
     pal.forEach(([r, g, b], j) => {
@@ -270,7 +329,20 @@ function drawPalettes() {
       sw.className = 'pal-swatch';
       sw.style.background = `rgb(${r},${g},${b})`;
       const code = document.createElement('code');
-      code.textContent = state.out.opts.obj && j === 0 ? '—' : hex(r, g, b);
+      const raw = pal[j].raw;   // absent on a DMG, which has no stored palette
+      if (o.opts.obj && j === 0) {
+        code.textContent = '\u2014';
+        sw.title = 'transparent';
+      } else if (raw === undefined) {
+        code.textContent = String(j);
+        sw.title = `shade ${j} \u2014 the program picks it with BGP; `
+          + `this is what a Game Boy's screen shows (${hex(r, g, b)})`;
+      } else {
+        const h4 = raw.toString(16).toUpperCase().padStart(4, '0');
+        code.textContent = '$' + h4;
+        sw.title = `RGB555 $${h4}  (r${raw & 31} g${(raw >> 5) & 31} b${(raw >> 10) & 31})`
+          + `  \u2248 ${hex(r, g, b)}`;
+      }
       sw.append(code);
       row.append(sw);
     });
@@ -284,20 +356,26 @@ const hex = (r, g, b) => '#' + [r, g, b].map((v) => v.toString(16).padStart(2, '
 function drawStats() {
   const o = state.out;
   const rows = [
-    ['tiles', `${o.uniqueTiles}${o.uniqueTiles !== o.totalTiles ? ` / ${o.totalTiles}` : ''}`],
-    ['palettes', o.palettes.length ? o.paletteCount : '—'],
-    ['size', `${o.previewWidth}×${o.previewHeight}`],
+    ['size', `${o.previewWidth}\u00d7${o.previewHeight}`],
+    ['tiles', `${o.uniqueTiles}`],
+    ['palettes', o.palettes.length ? o.paletteCount : '\u2014'],
     ['took', `${o.ms} ms`],
   ];
-  $('stats').innerHTML = rows
-    .map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`)
-    .join('');
+  $('stats').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');
 }
+
+const FILE_NOTES = {
+  tiles: '2bpp tile data, 16 bytes each',
+  palettes: 'RGB555, 8 bytes per palette',
+  attributes: 'palette and flips, one byte per cell',
+  map: 'which tile each cell holds',
+};
 
 function drawDownloads() {
   const o = state.out;
   const box = $('downloads');
   box.textContent = '';
+
   const files = [
     ['tiles', o.tiles],
     ['palettes', o.palettes],
@@ -306,18 +384,33 @@ function drawDownloads() {
   ].filter(([, d]) => d.length);
 
   for (const [kind, data] of files) {
-    const b = document.createElement('button');
-    b.className = 'dl';
-    b.innerHTML = `${kind}.bin <small>${data.length} B</small>`;
-    b.onclick = () => save(`${state.name}_${kind}.bin`, data);
-    box.append(b);
+    box.append(card(`${kind}.bin`, bytes(data.length), FILE_NOTES[kind],
+      () => save(`${state.name}_${kind}.bin`, data)));
   }
-  const png = document.createElement('button');
-  png.className = 'dl';
-  png.innerHTML = 'preview.png';
-  png.onclick = () => $('cv-result').toBlob((blob) => saveBlob(`${state.name}_preview.png`, blob));
-  box.append(png);
+  box.append(card('preview.png', 'png', 'the image as the console shows it',
+    () => $('cv-result').toBlob((b) => saveBlob(`${state.name}_preview.png`, b))));
 }
+
+function card(name, size, title, onClick) {
+  const b = document.createElement('button');
+  b.className = 'dl';
+  b.type = 'button';
+  b.title = title;
+  const arrow = document.createElement('span');
+  arrow.className = 'dl-arrow';
+  arrow.textContent = '\u2193';
+  const n = document.createElement('span');
+  n.className = 'dl-name';
+  n.textContent = name;
+  const z = document.createElement('span');
+  z.className = 'dl-size';
+  z.textContent = size;
+  b.append(arrow, n, z);
+  b.onclick = onClick;
+  return b;
+}
+
+const bytes = (n) => (n < 1024 ? `${n} B` : `${(n / 1024).toFixed(1)} kB`);
 
 function save(name, data) {
   saveBlob(name, new Blob([data], { type: 'application/octet-stream' }));
@@ -353,9 +446,8 @@ function humanize(msg) {
 }
 
 function showError(msg) {
-  const el = $('error');
-  el.hidden = !msg;
-  el.textContent = msg ? humanize(msg) : '';
+  $('error').hidden = !msg;
+  $('error-text').textContent = msg ? humanize(msg) : '';
 }
 
 // ── wiring ─────────────────────────────────────────────────
@@ -363,7 +455,8 @@ function showError(msg) {
 $('file').addEventListener('change', (e) => loadFile(e.target.files[0]));
 
 async function loadExample() {
-  const res = await fetch('./sample.png');
+  // Skip the HTTP cache: this file changes, and it is served without an ETag.
+  const res = await fetch('./sample.png', { cache: 'reload' });
   await loadFile(new File([await res.blob()], 'example.png', { type: 'image/png' }));
 }
 $('try-example').onclick = loadExample;
@@ -391,20 +484,52 @@ $('preset-screen').onclick = () => {
   schedule();
 };
 
-for (const tab of document.querySelectorAll('.tab')) {
-  tab.onclick = () => {
-    for (const t of document.querySelectorAll('.tab')) t.classList.toggle('is-active', t === tab);
-    state.view = tab.dataset.view;
-    if (state.out) render();
-  };
+// 1x is whatever fills the viewport; the steps above it are whole multiples of
+// that, so the pixels stay square.
+const setZoom = (step) => {
+  const next = Math.min(8, Math.max(1, step));
+  const k = next / state.zoomStep;
+  state.panX *= k;
+  state.panY *= k;
+  state.zoomStep = next;
+  applyView();
+};
+$('zoom-in').onclick = () => setZoom(state.zoomStep + 1);
+$('zoom-out').onclick = () => setZoom(state.zoomStep - 1);
+
+// Drag to move the result once it is bigger than the space it sits in.
+const vp = $('viewport');
+let drag = null;
+vp.addEventListener('pointerdown', (e) => {
+  if (!state.out || !vp.classList.contains('can-pan')) return;
+  drag = { x: e.clientX, y: e.clientY, px: state.panX, py: state.panY };
+  vp.setPointerCapture(e.pointerId);
+  vp.classList.add('is-panning');
+});
+vp.addEventListener('pointermove', (e) => {
+  if (!drag) return;
+  state.panX = drag.px + (e.clientX - drag.x);
+  state.panY = drag.py + (e.clientY - drag.y);
+  applyView();
+});
+for (const ev of ['pointerup', 'pointercancel']) {
+  vp.addEventListener(ev, () => { drag = null; vp.classList.remove('is-panning'); });
 }
 
-const setZoom = (z) => {
-  state.zoom = Math.min(8, Math.max(1, z));
-  $('zoom-label').textContent = state.zoom + '×';
-  if (state.out) render();
+addEventListener('resize', () => { if (state.out) applyView(); });
+
+// The tiles are drawn at 8x8 and sized in CSS, so this costs nothing to change.
+const setTileZoom = (z) => {
+  state.tileZoom = Math.min(16, Math.max(1, z));
+  $('tilegrid').style.setProperty('--tz', state.tileZoom);
+  $('tile-zoom').textContent = state.tileZoom + '\u00d7';
+  $('tile-out').disabled = state.tileZoom <= 1;
+  $('tile-in').disabled = state.tileZoom >= 16;
 };
-$('zoom-in').onclick = () => setZoom(state.zoom + 1);
-$('zoom-out').onclick = () => setZoom(state.zoom - 1);
+$('tile-in').onclick = () => setTileZoom(state.tileZoom + 1);
+$('tile-out').onclick = () => setTileZoom(state.tileZoom - 1);
+setTileZoom(state.tileZoom);
 
 syncForm();
+
+window.__gbfxReady = true;

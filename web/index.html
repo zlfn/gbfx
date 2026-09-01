@@ -16,8 +16,10 @@
     <span class="brand-name">gb-image-fx</span>
   </div>
   <div class="topbar-links">
-    <a href="https://crates.io/crates/gb-image-fx">crate</a>
-    <a href="https://github.com/zlfn/rust-gb/tree/main/tools/gb-image-fx">source</a>
+    <a href="https://crates.io/crates/gb-image-fx" title="the crate on crates.io" aria-label="the crate on crates.io">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 .8 14 4v8L8 15.2 2 12V4L8 .8Zm0 1.5L3.6 4.6 8 6.9l4.4-2.3L8 2.3ZM3.2 5.6v5.8l4.2 2.2V7.8L3.2 5.6Zm5.4 8V7.8l4.2-2.2v5.8l-4.2 2.2Z"/></svg></a>
+    <a href="https://github.com/zlfn/rust-gb/tree/main/tools/gb-image-fx" title="the source on GitHub" aria-label="the source on GitHub">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.012 8.012 0 0 0 16 8c0-4.42-3.58-8-8-8Z"/></svg></a>
   </div>
 </header>
 
@@ -96,6 +98,8 @@
       <section class="field-set">
         <h2>Sprites</h2>
         <label class="check"><input type="checkbox" id="do-obj"> Transparent index 0</label>
+        <p class="note" id="obj-note" hidden>This image has no alpha, so nothing becomes
+          transparent &mdash; it only spends a colour on the reserved slot.</p>
         <label class="check"><input type="checkbox" id="do-meta"> Metasprite cells</label>
         <div class="row size-row" id="meta-row">
           <input type="number" id="mw" value="16" min="8" step="8" aria-label="Cell width">
@@ -111,20 +115,15 @@
   <section class="stage">
 
     <div class="stage-bar">
-      <div class="tabs" role="tablist">
-        <button class="tab is-active" data-view="preview" role="tab">Preview</button>
-        <button class="tab" data-view="tiles" role="tab">Tiles</button>
-        <button class="tab" data-view="palettes" role="tab">Palettes</button>
-      </div>
-      <div class="zoom" id="zoom-wrap">
+      <dl class="stats" id="stats"></dl>
+      <div class="zoom" id="zoom-wrap" hidden>
         <button type="button" class="ghost icon" id="zoom-out" aria-label="Zoom out">&minus;</button>
-        <span id="zoom-label">2&times;</span>
+        <span id="zoom-label">4&times;</span>
         <button type="button" class="ghost icon" id="zoom-in" aria-label="Zoom in">+</button>
       </div>
     </div>
 
     <div class="viewport" id="viewport">
-
       <div class="empty" id="empty">
         <p>Nothing loaded yet.</p>
         <p class="muted">Drop an image on the left to begin.</p>
@@ -132,36 +131,72 @@
 
       <div class="busy" id="busy" hidden>
         <span class="spinner" aria-hidden="true"></span>
-        <span id="busy-label">Converting&hellip;</span>
+        <span>Converting&hellip;</span>
       </div>
 
-      <div class="view" id="view-preview" hidden>
-        <div class="compare">
-          <figure><figcaption>source</figcaption><canvas id="cv-source"></canvas></figure>
-          <figure><figcaption id="cap-result">result</figcaption><canvas id="cv-result" class="checker"></canvas></figure>
-        </div>
+      <canvas id="cv-result" hidden></canvas>
+
+      <div class="alert" id="error" hidden>
+        <span class="alert-mark" aria-hidden="true">!</span>
+        <div><h3>That will not convert</h3><p id="error-text"></p></div>
       </div>
 
-      <div class="view" id="view-tiles" hidden>
-        <div class="tilegrid" id="tilegrid"></div>
-      </div>
-
-      <div class="view" id="view-palettes" hidden>
-        <div class="palettes" id="palettes"></div>
-      </div>
-
+      <figure class="thumb" id="thumb" hidden>
+        <canvas id="cv-source"></canvas>
+        <figcaption id="cap-result">source</figcaption>
+      </figure>
     </div>
 
-    <div class="stage-foot" id="foot" hidden>
-      <dl class="stats" id="stats"></dl>
+    <div class="dock" id="dock" hidden>
+      <section class="pane">
+        <h2 class="pane-head">
+          Tiles <span class="count" id="tile-count"></span>
+          <span class="zoom pane-zoom">
+            <button type="button" class="ghost icon" id="tile-out" aria-label="Smaller tiles">&minus;</button>
+            <span id="tile-zoom">4&times;</span>
+            <button type="button" class="ghost icon" id="tile-in" aria-label="Bigger tiles">+</button>
+          </span>
+        </h2>
+        <div class="pane-body"><div class="tilegrid" id="tilegrid"></div></div>
+      </section>
+    </div>
+
+    <div class="dlbar" id="dlbar" hidden>
+      <span class="dlbar-label">Download</span>
       <div class="downloads" id="downloads"></div>
     </div>
 
-    <p class="error" id="error" hidden></p>
 
   </section>
+
+  <!-- ── palettes, down the right ─────────────────────────── -->
+  <aside class="rail" id="rail" hidden>
+    <h2 class="pane-head"><span id="pal-title">Palettes</span> <span class="count" id="pal-count"></span></h2>
+    <div class="pane-body"><div class="palettes" id="palettes"></div></div>
+  </aside>
 </main>
 
+<!-- A classic script still runs from a file:// page, so it can explain why the
+     module one did not. -->
+<script>
+window.addEventListener('DOMContentLoaded', function () {
+  setTimeout(function () {
+    if (window.__gbfxReady) return;
+    var box = document.getElementById('empty');
+    box.innerHTML = location.protocol === 'file:'
+      ? '<p>This page has to be served over HTTP.</p>' +
+        '<p class="muted">Opened straight from disk, the browser blocks the module ' +
+        'script, the worker and WebAssembly, which leaves the controls inert.</p>' +
+        '<p class="muted"><code>python3 -m http.server --directory web</code></p>'
+      : '<p>The converter did not load.</p>' +
+        '<p class="muted">If this is a local copy, build it with <code>./build.sh</code> ' +
+        'so that <code>web/pkg</code> exists.</p>';
+    box.hidden = false;
+    document.getElementById('drop').classList.add('is-dead');
+    document.getElementById('try-example').disabled = true;
+  }, 1500);
+});
+</script>
 <script type="module" src="app.js"></script>
 </body>
 </html>
