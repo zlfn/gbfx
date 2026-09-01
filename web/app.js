@@ -526,14 +526,47 @@ const CONTROL_NAMES = {
   '--metasprite': 'Metasprite cells',
 };
 
+// Messages written for the command line, said again for someone who has a form
+// in front of them instead of flags.
+const REWRITES = [
+  [/^\u201cQuantization\u201d dimensions must be multiples of 8$/,
+    () => 'A tile is 8 pixels across, so both sides of the size have to be a multiple of 8.'],
+
+  [/^image dimensions (\d+)\u00d7(\d+) must be multiples of 8.*$/,
+    (_, w, h) => `This image is ${w}\u00d7${h}, and a tile is 8 pixels across. `
+      + 'Turn \u201cQuantization\u201d on to fit it to the screen.'],
+
+  [/^\u201cGame Boy mode\u201d image has (\d+) opaque colors \(max (\d+)[^)]*\).*$/,
+    (_, found, max) => `A Game Boy image can hold ${max} colours, and this one has ${found}. `
+      + 'Turn \u201cQuantization\u201d on to reduce it.'],
+
+  [/^tile \((\d+),(\d+)\) has (\d+) opaque colors \(max (\d+)\)$/,
+    (_, x, y, found, max) => `One 8\u00d78 square of the image holds ${found} colours, `
+      + `and a palette has room for ${max}. Turn \u201cQuantization\u201d on to reduce it.`],
+
+  [/^image requires more than 8 palettes.*$/,
+    () => 'This image needs more than the eight palettes a Game Boy Color has. '
+      + 'Turn \u201cQuantization\u201d on to reduce it.'],
+
+  [/^\u201cMetasprite cells\u201d (\d+)x(\d+) must be multiples of 8$/,
+    (_, w, h) => `A tile is 8 pixels across, so a ${w}\u00d7${h} cell does not divide into tiles.`],
+
+  [/^\u201cMetasprite cells\u201d (\d+)x(\d+) does not divide the (\d+)x(\d+) image$/,
+    (_, cw, ch, w, h) => `The image is ${w}\u00d7${h}, which ${cw}\u00d7${ch} cells do not divide into.`],
+];
+
 function humanize(msg) {
-  return msg
+  const said = msg
     .replace(/\s*\n\s*/g, ' ')
     .replace(/--[a-z-]+/g, (f) => CONTROL_NAMES[f] ? `\u201c${CONTROL_NAMES[f]}\u201d` : f)
     .replace(/\(smaller \u201cQuantization\u201d, or drop \u201cDither\u201d\)/, '(a smaller size, or no dithering)')
     .replace(/, or drop \u201cTile map\u201d and place the tiles yourself\./,
-             ', or turn \u201cTile map\u201d off and place the tiles yourself.')
-    .replace(/\(use \u201cQuantization\u201d WxH\)/, 'so turn \u201cQuantization\u201d on');
+             ', or turn \u201cTile map\u201d off and place the tiles yourself.');
+
+  for (const [pattern, rewrite] of REWRITES) {
+    if (pattern.test(said)) return said.replace(pattern, rewrite);
+  }
+  return said;
 }
 
 function showError(msg) {
