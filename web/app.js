@@ -515,7 +515,7 @@ function saveBlob(name, blob) {
 
 // The converter reports in command-line terms; say it in the page's terms.
 const CONTROL_NAMES = {
-  '--quantize': 'the target size',
+  '--quantize': 'Quantization',
   '--dither': 'Dither',
   '--map': 'Tile map',
   '--dedup': 'Fold identical tiles',
@@ -530,9 +530,10 @@ function humanize(msg) {
   return msg
     .replace(/\s*\n\s*/g, ' ')
     .replace(/--[a-z-]+/g, (f) => CONTROL_NAMES[f] ? `\u201c${CONTROL_NAMES[f]}\u201d` : f)
-    .replace(/\(smaller \u201cthe target size\u201d, or drop \u201cDither\u201d\)/, '(a smaller size, or no dithering)')
+    .replace(/\(smaller \u201cQuantization\u201d, or drop \u201cDither\u201d\)/, '(a smaller size, or no dithering)')
     .replace(/, or drop \u201cTile map\u201d and place the tiles yourself\./,
-             ', or turn \u201cTile map\u201d off and place the tiles yourself.');
+             ', or turn \u201cTile map\u201d off and place the tiles yourself.')
+    .replace(/\(use \u201cQuantization\u201d WxH\)/, 'so turn \u201cQuantization\u201d on');
 }
 
 function showError(msg) {
