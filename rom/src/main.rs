@@ -1,13 +1,5 @@
-//! Shows one full-screen image, 160x144 of it, with every tile its own.
-//!
-//! A map entry is one byte, so a tile map reaches 256 tiles, and a full screen
-//! needs 360. The screen is therefore drawn in two halves: the top nine rows
-//! read tile data as unsigned from 0x8000, the bottom nine as signed from
-//! 0x8800, and a STAT interrupt on LY=72 flips LCDC between the two. Laid out
-//! that way both halves index with `cell & 0xff`, so the map is just a count.
-//!
-//! The three blobs are placeholders. The web build finds them in the ROM by
-//! their contents and writes the real image over them.
+//! Shows one full-screen image. The three blobs are placeholders; the web build
+//! finds them in the ROM by their contents and writes the real image over them.
 
 #![no_std]
 #![no_main]
@@ -24,11 +16,8 @@ static ATTRIBUTES: &[u8] = include_bytes!("../res/attributes.bin");
 
 const COLS: usize = 20;
 const ROWS: usize = 18;
-/// The row the addressing mode changes on, and the scanline that is.
-const SPLIT_ROW: usize = 9;
-const SPLIT_LINE: u8 = (SPLIT_ROW * 8) as u8;
+const SPLIT_LINE: u8 = 72;
 
-/// Base LCDC: background on, map at 0x9800, unsigned tile data, LCD running.
 fn base_lcdc() -> Lcdc {
     Lcdc::new()
         .with_lcd_enable(true)
@@ -36,8 +25,8 @@ fn base_lcdc() -> Lcdc {
         .with_tiledata_8000(true)
 }
 
-/// Half way down the screen the tile data area changes, and at the bottom it
-/// changes back for the next frame.
+/// A map entry reaches 256 tiles and a screen needs 360, so the halves read
+/// tile data from different areas. This swaps them, every frame.
 #[gb_rt::interrupt(LcdStat)]
 fn split() {
     unsafe {
@@ -52,7 +41,6 @@ fn split() {
 }
 
 fn main() -> ! {
-    // Everything below writes VRAM, so the picture stays off until it is ready.
     unsafe { LCDC.write(Lcdc::new()) };
     SCX.write(0);
     SCY.write(0);
@@ -63,7 +51,7 @@ fn main() -> ! {
         unsafe { core::ptr::write_volatile((0x8000 + i * 16) as *mut [u8; 16], tile) };
     }
 
-    // Both halves land on the tile they need when the map just counts cells.
+    // Both halves land on the right tile when the map just counts cells.
     for row in 0..ROWS {
         for col in 0..COLS {
             TILEMAP_0.index(col, row).write((row * COLS + col) as u8);
@@ -99,6 +87,7 @@ fn main() -> ! {
     unsafe { LCDC.write(base_lcdc()) };
     unsafe { gb::interrupt::enable() };
 
+    // Nothing left to do; the split runs on its own from here.
     loop {
         gb::interrupt::halt();
     }

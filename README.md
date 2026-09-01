@@ -18,13 +18,11 @@ A map entry is one byte, so a tile map reaches 256 tiles while a full screen
 needs 360; the ROM draws the top nine rows with unsigned tile indices and the
 bottom nine with signed ones, flipping `LCDC` on a `STAT` interrupt at LY=72.
 
-Both are committed, since building the ROM needs the [rust-z80
+The built ROM is committed, since making it needs the [rust-z80
 fork](https://github.com/zlfn/rust-gb) and `cargo gb`, which the page's own
-build has no use for. To rebuild it:
-
-```
-./build-rom.sh
-```
+build has no use for. With those in hand, `cargo gb build` inside `rom/` gives
+a new one; the offsets in `web/rom/offsets.json` are where each placeholder
+lands, found by searching the ROM for the placeholder's contents.
 
 ## Building
 
@@ -49,4 +47,3 @@ python3 -m http.server --directory web
 | `rom/` | the Game Boy viewer the page patches an image into |
 | `web/` | the page, served as-is |
 | `build.sh` | builds `web/pkg` |
-| `build-rom.sh` | builds `web/rom` (needs the rust-z80 toolchain) |
