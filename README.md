@@ -1,10 +1,10 @@
-# gb-image-fx-web
+# gbfx
 
 [gb-image-fx](https://crates.io/crates/gb-image-fx) in the browser: drop in an
 image and get the tile data, palettes, attributes and tile map a Game Boy or
 Game Boy Color program loads.
 
-**[zlfn.github.io/gb-image-fx-web](https://zlfn.github.io/gb-image-fx-web/)**
+**[zlfn.github.io/gbfx](https://zlfn.github.io/gbfx/)**
 
 The conversion is the crate compiled to WebAssembly, so it runs on the page and
 nothing is uploaded. It runs in a worker, since a dithered reduction takes a
