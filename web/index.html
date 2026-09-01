@@ -193,11 +193,8 @@
   to WebAssembly, so nothing leaves the page.</p>
 
   <h3>The ROM is written in pure Rust!</h3>
-  <p>Game Boy cartridges are usually built in C. This one is not. It is
-  compiled by <a href="https://github.com/zlfn/rust-gb">rust-gb</a>, which
-  turns Rust crates into ROMs: a toolchain fork that targets the console's
-  SM83, typed hardware registers, safe ROM bank switching, and a
-  <code>cargo gb build</code> that writes the cartridge.
+  <p>Game Boy cartridges are usually built in C. This one is not: it is
+  compiled by <a href="https://github.com/zlfn/rust-gb">rust-gb</a>.
   <a href="https://github.com/zlfn/gbfx/blob/main/rom/src/main.rs">The source
   is here</a>.</p>
 
