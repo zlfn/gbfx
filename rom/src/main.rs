@@ -18,6 +18,13 @@ const COLS: usize = 20;
 const ROWS: usize = 18;
 const SPLIT_LINE: u8 = 72;
 
+/// A colour machine only lends its palettes to a cartridge that asks for them:
+/// with the header's flag cleared it runs in compatibility mode, where the
+/// colour registers are locked, so the header decides as much as the machine.
+fn colour() -> bool {
+    gb::is_cgb() && unsafe { core::ptr::read_volatile(0x0143 as *const u8) } == 0x80
+}
+
 fn base_lcdc() -> Lcdc {
     Lcdc::new()
         .with_lcd_enable(true)
@@ -58,7 +65,7 @@ fn main() -> ! {
         }
     }
 
-    if gb::is_cgb() {
+    if colour() {
         VBK.write(1);
         for row in 0..ROWS {
             for col in 0..COLS {

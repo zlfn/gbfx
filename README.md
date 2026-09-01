@@ -14,7 +14,9 @@ second or two.
 
 A full-screen conversion can also be downloaded as a Game Boy ROM: the page
 writes the tiles, palettes and attributes into a prebuilt program and fixes the
-cartridge checksum, so the result runs in an emulator or on hardware.
+cartridge checksum, so the result runs in an emulator or on hardware. A Game
+Boy image comes back as a `.gb` with the header's colour flag cleared, which
+the ROM reads as well, so it takes its four shades from BGP.
 
 `rom/` is that program, and `web/rom` holds it built along with the offsets of
 the three blobs the page writes over.

@@ -416,21 +416,17 @@ async function buildRom() {
     put('palettes', o.palettes);
     put('attributes', o.attributes);
   } else {
-    // A DMG image carries no palette, but the same ROM runs on a Game Boy
-    // Color, so give it the shades that console would have shown.
-    const pal = new Uint8Array(offsets.palettes.size);
-    for (let i = 0; i < pal.length; i += 2) {
-      const [r, g, b] = DMG_SHADES[(i >> 1) & 3];
-      const v = (r >> 3) | ((g >> 3) << 5) | ((b >> 3) << 10);
-      pal[i] = v & 0xff;
-      pal[i + 1] = v >> 8;
-    }
-    put('palettes', pal);
+    // Clearing the header's colour flag makes this a Game Boy cartridge, and
+    // the ROM reads that flag too, so it takes its shades from BGP instead.
+    put('palettes', new Uint8Array(offsets.palettes.size));
     put('attributes', new Uint8Array(offsets.attributes.size));
+    out[0x143] = 0x00;
+    let header = 0;
+    for (let i = 0x134; i <= 0x14c; i++) header = (header - out[i] - 1) & 0xff;
+    out[0x14d] = header;
   }
 
-  // The header checksum covers only the header, which is untouched; the global
-  // one covers the whole cartridge and has to be redone.
+  // The global checksum covers the whole cartridge, so it has to be redone.
   let sum = 0;
   for (let i = 0; i < out.length; i++) if (i !== 0x14e && i !== 0x14f) sum += out[i];
   out[0x14e] = (sum >> 8) & 0xff;
@@ -465,9 +461,10 @@ function drawDownloads() {
     () => $('cv-result').toBlob((b) => saveBlob(`${state.name}_preview.png`, b))));
 
   const blocker = romBlocker(o);
-  const rom = card(`${state.name}.gbc`, 'rom',
+  const ext = o.palettes.length ? 'gbc' : 'gb';
+  const rom = card(`${state.name}.${ext}`, ext,
     blocker || 'a Game Boy program that shows this image',
-    async () => save(`${state.name}.gbc`, await buildRom()));
+    async () => save(`${state.name}.${ext}`, await buildRom()));
   rom.classList.add('dl-rom');
   rom.disabled = !romFits(o);
   box.append(rom);
