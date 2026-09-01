@@ -11,7 +11,7 @@
   --accent-dim: #7d980c;
   --danger: #e2665c;
   --radius: 10px;
-  --sidebar: 352px;
+  --sidebar: 330px;
   --rail: 276px;
   color-scheme: dark;
 }
@@ -202,6 +202,7 @@ body {
 }
 
 .panel {
+  font-size: 14px;
   border-right: 1px solid var(--line);
   background: var(--bg-raised);
   overflow-y: auto;
@@ -251,8 +252,8 @@ body {
 .drop:hover .drop-icon, .drop.is-over .drop-icon { border-color: var(--accent); }
 .drop:hover .drop-icon::after, .drop.is-over .drop-icon::after { background: var(--accent); }
 
-.drop-title { font-weight: 560; font-size: 15.5px; }
-.drop-hint { font-size: 13px; color: var(--ink-faint); }
+.drop-title { font-weight: 560; font-size: 14.5px; }
+.drop-hint { font-size: 12.5px; color: var(--ink-faint); }
 
 /* ── fields ──────────────────────────────────────────────── */
 
@@ -265,8 +266,8 @@ body {
 .field-set:first-child { border-top: 0; padding-top: 4px; }
 
 .field-set h2 {
-  margin: 0 0 11px;
-  font-size: 12px;
+  margin: 0 0 10px;
+  font-size: 11.5px;
   font-weight: 640;
   letter-spacing: .08em;
   text-transform: uppercase;
@@ -278,7 +279,7 @@ body {
 
 .note {
   margin: 8px 0 0;
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.45;
   color: var(--ink-faint);
 }
@@ -297,7 +298,7 @@ body {
 .segmented label {
   padding: 8px 4px;
   text-align: center;
-  font-size: 14px;
+  font-size: 13.5px;
   border-radius: 6px;
   cursor: pointer;
   color: var(--ink-dim);
@@ -325,7 +326,7 @@ body {
 
 .check input {
   appearance: none;
-  width: 19px; height: 19px;
+  width: 18px; height: 18px;
   flex: none;
   border: 1.5px solid var(--line);
   border-radius: 5px;
@@ -349,7 +350,7 @@ body {
 
 /* inputs */
 input[type=number], select {
-  font-size: 14.5px;
+  font-size: 14px;
   background: var(--bg-sunken);
   border: 1px solid var(--line);
   border-radius: 7px;
