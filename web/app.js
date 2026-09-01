@@ -331,17 +331,17 @@ function drawPalettes() {
       const code = document.createElement('code');
       const raw = pal[j].raw;   // absent on a DMG, which has no stored palette
       if (o.opts.obj && j === 0) {
-        code.textContent = '\u2014';
+        code.textContent = 'clear';
         sw.title = 'transparent';
       } else if (raw === undefined) {
         code.textContent = String(j);
-        sw.title = `shade ${j} \u2014 the program picks it with BGP; `
-          + `this is what a Game Boy's screen shows (${hex(r, g, b)})`;
+        sw.title = `shade ${j}, which the program picks with BGP. `
+          + `A Game Boy's screen shows it as ${hex(r, g, b)}.`;
       } else {
         const h4 = raw.toString(16).toUpperCase().padStart(4, '0');
         code.textContent = '$' + h4;
-        sw.title = `RGB555 $${h4}  (r${raw & 31} g${(raw >> 5) & 31} b${(raw >> 10) & 31})`
-          + `  \u2248 ${hex(r, g, b)}`;
+        sw.title = `RGB555 $${h4} (r${raw & 31} g${(raw >> 5) & 31} b${(raw >> 10) & 31}), `
+          + `about ${hex(r, g, b)} on a screen`;
       }
       sw.append(code);
       row.append(sw);
@@ -358,7 +358,7 @@ function drawStats() {
   const rows = [
     ['size', `${o.previewWidth}\u00d7${o.previewHeight}`],
     ['tiles', `${o.uniqueTiles}`],
-    ['palettes', o.palettes.length ? o.paletteCount : '\u2014'],
+    ['palettes', o.palettes.length ? o.paletteCount : 'none'],
     ['took', `${o.ms} ms`],
   ];
   $('stats').innerHTML = rows.map(([k, v]) => `<div><dt>${k}</dt><dd>${v}</dd></div>`).join('');

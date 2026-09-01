@@ -101,8 +101,8 @@
       <section class="field-set">
         <h2>Sprites</h2>
         <label class="check"><input type="checkbox" id="do-obj"> Transparent index 0</label>
-        <p class="note" id="obj-note" hidden>This image has no alpha, so nothing becomes
-          transparent &mdash; it only spends a colour on the reserved slot.</p>
+        <p class="note" id="obj-note" hidden>This image has no alpha, so nothing
+          becomes transparent. It only spends a colour on the reserved slot.</p>
         <label class="check"><input type="checkbox" id="do-meta"> Metasprite cells</label>
         <div class="row size-row" id="meta-row">
           <input type="number" id="mw" value="16" min="8" step="8" aria-label="Cell width">
@@ -192,14 +192,14 @@
   <a href="https://crates.io/crates/gb-image-fx">gb-image-fx</a> crate compiled
   to WebAssembly, so nothing leaves the page.</p>
 
-  <h3>The ROM is pure Rust</h3>
-  <p>A full-screen conversion can be downloaded as a cartridge, and the program
-  inside it is written in Rust with no C at all &mdash; the hardware registers
-  are poked directly, down to the <code>STAT</code> interrupt that lets one
-  screen hold 360 tiles when a tile map only reaches 256.
-  <a href="https://github.com/zlfn/gbfx/blob/main/rom/src/main.rs">Read it</a>,
-  or the runtime it stands on,
-  <a href="https://github.com/zlfn/rust-gb">rust-gb</a>.</p>
+  <h3>The ROM is written in pure Rust!</h3>
+  <p>Game Boy cartridges are usually built in C. This one is not. It is
+  compiled by <a href="https://github.com/zlfn/rust-gb">rust-gb</a>, which
+  turns Rust crates into ROMs: a toolchain fork that targets the console's
+  SM83, typed hardware registers, safe ROM bank switching, and a
+  <code>cargo gb build</code> that writes the cartridge.
+  <a href="https://github.com/zlfn/gbfx/blob/main/rom/src/main.rs">The source
+  is here</a>.</p>
 
   <h3>What it uses</h3>
   <dl class="about-list">
@@ -210,7 +210,7 @@
       whichever palette carries the most error.</dd>
 
     <dt>Screen correction</dt>
-    <dd>The CGB display model (Modern &ndash; Balanced) from
+    <dd>The CGB display model (Modern Balanced) from
       <a href="https://github.com/LIJI32/SameBoy">SameBoy</a> by Lior Halphon,
       run backwards so the colours land where they started.</dd>
 
@@ -228,15 +228,15 @@
   <p class="about-lic">Everything here is permissively licensed. The converter
   and the runtime are <b>Zlib OR Apache-2.0 OR MIT</b>; what they pull in:</p>
   <ul class="about-lic-list">
-    <li><b>Zlib OR Apache-2.0 OR MIT</b> &mdash; bytemuck, wide</li>
-    <li><b>MIT OR Apache-2.0</b> &mdash; image, palette, wasm-bindgen, glam,
+    <li><b>Zlib OR Apache-2.0 OR MIT</b>: bytemuck, wide</li>
+    <li><b>MIT OR Apache-2.0</b>: image, palette, wasm-bindgen, glam,
       num-traits, bumpalo, once_cell, typenum, syn, quote, proc-macro2</li>
-    <li><b>MIT</b> &mdash; decolorize, phf</li>
-    <li><b>Apache-2.0</b> &mdash; nalgebra, simba, approx</li>
-    <li><b>BSD-3-Clause OR Apache-2.0</b> &mdash; moxcms, pxfm</li>
-    <li><b>MIT/Apache-2.0</b> &mdash; matrixmultiply, rawpointer, siphasher</li>
-    <li><b>Unlicense OR MIT</b> &mdash; byteorder-lite</li>
-    <li><b>(MIT OR Apache-2.0) AND Unicode-3.0</b> &mdash; unicode-ident</li>
+    <li><b>MIT</b>: decolorize, phf</li>
+    <li><b>Apache-2.0</b>: nalgebra, simba, approx</li>
+    <li><b>BSD-3-Clause OR Apache-2.0</b>: moxcms, pxfm</li>
+    <li><b>MIT/Apache-2.0</b>: matrixmultiply, rawpointer, siphasher</li>
+    <li><b>Unlicense OR MIT</b>: byteorder-lite</li>
+    <li><b>(MIT OR Apache-2.0) AND Unicode-3.0</b>: unicode-ident</li>
   </ul>
 </dialog>
 

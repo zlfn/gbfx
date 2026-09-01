@@ -38,7 +38,7 @@ cargo install wasm-bindgen-cli --version <the wasm-bindgen version in crate/Carg
 ./build.sh
 ```
 
-That writes `web/pkg`. Serve `web` over HTTP — modules and WebAssembly will not
+That writes `web/pkg`. Serve `web` over HTTP; modules and WebAssembly do not
 load from `file://`:
 
 ```
