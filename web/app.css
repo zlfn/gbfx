@@ -175,6 +175,8 @@ body {
   color: var(--ink-dim);
 }
 
+.about-more { margin: 0 0 12px; }
+
 .about-lic { margin-bottom: 8px; }
 .about-lic-list {
   margin: 0;
